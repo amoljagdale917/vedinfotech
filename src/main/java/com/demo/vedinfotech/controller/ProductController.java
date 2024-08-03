@@ -4,7 +4,6 @@ import com.demo.vedinfotech.dto.ApiResponse;
 import com.demo.vedinfotech.dto.ProductRequest;
 import com.demo.vedinfotech.entity.Activity;
 import com.demo.vedinfotech.entity.ProductEntity;
-import com.demo.vedinfotech.exception.ErrorDetails;
 import com.demo.vedinfotech.exception.ResourceNotFoundException;
 import com.demo.vedinfotech.service.ProductService;
 import org.springframework.http.HttpStatus;
@@ -23,6 +22,9 @@ public class ProductController {
         this.productService = productService;
     }
 
+    /*
+    UPDATE, CREATE, DELETE AND GET
+     */
     @PostMapping
     public ResponseEntity<ApiResponse<?>> handleProductRequest(@RequestBody ProductRequest request) {
         try {
