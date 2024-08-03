@@ -14,4 +14,15 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+# Custom User Password for Spring security
+#  security:
+#    user:
+#      name: UserAdmin
+#      password: UserAdmin
+
+security:
+  user:
+    name: UserAdmin
+    password: UserAdmin
+
 
