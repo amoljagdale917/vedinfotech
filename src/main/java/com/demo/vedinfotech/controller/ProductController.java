@@ -1,8 +1,10 @@
 package com.demo.vedinfotech.controller;
 
+import com.demo.vedinfotech.dto.ApiResponse;
 import com.demo.vedinfotech.dto.ProductRequest;
 import com.demo.vedinfotech.entity.Activity;
 import com.demo.vedinfotech.entity.ProductEntity;
+import com.demo.vedinfotech.exception.ErrorDetails;
 import com.demo.vedinfotech.exception.ResourceNotFoundException;
 import com.demo.vedinfotech.service.ProductService;
 import org.springframework.http.HttpStatus;
@@ -22,37 +24,98 @@ public class ProductController {
     }
 
     @PostMapping
-    public ResponseEntity<ProductEntity> handleProductRequest(@RequestBody ProductRequest request) {
-        ProductEntity product;
-        switch (request.getActivity()) {
-            case CREATE:
-                product = productService.createProduct(request.getProduct(), request.getActivity());
-                return ResponseEntity.ok(product);
-            case UPDATE:
-                Long id = request.getProduct().getId();
-                if (id != null) {
-                    product = productService.updateProduct(id, request.getProduct(), request.getActivity());
-                } else {
-                    product = productService.createProduct(request.getProduct(), Activity.CREATE);
-                }
-                return ResponseEntity.ok(product);
-            case DELETE:
-                id = request.getProduct().getId();
-                if (id != null) {
-                    productService.deleteProduct(id, request.getActivity());
-                    return ResponseEntity.noContent().build();
-                } else {
-                    throw new ResourceNotFoundException("Product id must be provided for delete operation", "FAILED", HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST, "The request must include a valid product ID for deletion");
-                }
-            default:
-                return ResponseEntity.badRequest().build();
+    public ResponseEntity<ApiResponse<?>> handleProductRequest(@RequestBody ProductRequest request) {
+        try {
+            ApiResponse<?> response;
+            Activity activity = request.getActivity();
+            if (activity == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        new ApiResponse<>(
+                                "failed",
+                                HttpStatus.BAD_REQUEST.value(),
+                                "Invalid activity type",
+                                HttpStatus.BAD_REQUEST,
+                                null
+                        )
+                );
+            }
+
+            switch (activity) {
+                case CREATE:
+                    response = productService.createProduct(request.getProduct(), request.getActivity());
+                    return new ResponseEntity<>(response, response.getHttpStatus());
+                case UPDATE:
+                    Long id = request.getProduct().getId();
+                    response = productService.updateProduct(id, request.getProduct(), request.getActivity());
+                    return new ResponseEntity<>(response, response.getHttpStatus());
+                case DELETE:
+                    ProductEntity product = request.getProduct();
+                    if (product != null && product.getId() != null) {
+                        response = productService.deleteProduct(product.getId(), request.getActivity());
+                        return new ResponseEntity<>(response, response.getHttpStatus());
+                    } else {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                                new ApiResponse<>(
+                                        "failed",
+                                        HttpStatus.BAD_REQUEST.value(),
+                                        "Product id must be provided for delete operation",
+                                        HttpStatus.BAD_REQUEST,
+                                        null
+                                )
+                        );
+                    }
+                default:
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                            new ApiResponse<>(
+                                    "failed",
+                                    HttpStatus.BAD_REQUEST.value(),
+                                    "Invalid activity type",
+                                    HttpStatus.BAD_REQUEST,
+                                    null
+                            )
+                    );
+            }
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(e.getHttpStatus()).body(
+                    new ApiResponse<>(
+                            e.getStatus(),
+                            e.getStatusCode(),
+                            e.getMessage(),
+                            e.getHttpStatus(),
+                            null
+                    )
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    new ApiResponse<>(
+                            "failed",
+                            HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                            "An unexpected error occurred",
+                            HttpStatus.INTERNAL_SERVER_ERROR,
+                            null
+                    )
+            );
         }
     }
 
+
+
     @GetMapping("/{id}")
-    public ResponseEntity<ProductEntity> getProduct(@PathVariable Long id) {
-        Optional<ProductEntity> product = productService.getProduct(id);
-        return product.map(ResponseEntity::ok).orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id, "FAILED", HttpStatus.NOT_FOUND.value(), HttpStatus.NOT_FOUND, "Product with the specified ID does not exist"));
+    public ResponseEntity<ApiResponse<Optional<ProductEntity>>> getProduct(@PathVariable Long id) {
+        try {
+            ApiResponse<Optional<ProductEntity>> response = productService.getProduct(id);
+            return new ResponseEntity<>(response, response.getHttpStatus());
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(e.getHttpStatus()).body(
+                    new ApiResponse<>(
+                            e.getStatus(),
+                            e.getStatusCode(),
+                            e.getMessage(),
+                            e.getHttpStatus(),
+                            Optional.empty()  // Ensure this is Optional.empty()
+                    )
+            );
+        }
     }
 
 }
